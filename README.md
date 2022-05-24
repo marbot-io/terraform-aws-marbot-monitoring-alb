@@ -1,6 +1,6 @@
 # Application Load Balancer (ALB) monitoring
 
-Connects you to EventBridge of a particular Application Load Balancer, adds alarms to monitor request and connection errors, and forwards them to Slack or Microsoft Teams managed by [marbot](https://marbot.io/).
+Creates CloudWatch alarms to monitor an Application Load Balancer and forwards alarms to Slack or Microsoft Teams managed by [marbot](https://marbot.io/).
 
 ## Usage
 

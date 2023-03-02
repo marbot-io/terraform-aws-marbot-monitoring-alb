@@ -27,7 +27,7 @@ variable "targetgroup_fullname" {
 
 variable "alb_5xx_count_threshold" {
   type        = number
-  description = "The maximum number of 5XX responses from the ALB (not the targets) (set to -1 to disable)."
+  description = "The maximum number of 5XX responses from the ALB (not the targets) (set to -1 to disable or -2 for anomaly detection)."
   default     = 0
 }
 
@@ -39,7 +39,7 @@ variable "alb_rejected_connection_count_threshold" {
 
 variable "target_5xx_count_threshold" {
   type        = number
-  description = "The maximum number of 5XX responses from the targets (set -1 to disable)."
+  description = "The maximum number of 5XX responses from the targets (set to -1 to disable or -2 for anomaly detection)."
   default     = 0
 }
 

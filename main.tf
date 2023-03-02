@@ -154,6 +154,43 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high" {
   tags               = var.tags
 }
 
+resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection" {
+  depends_on = [aws_sns_topic_subscription.marbot]
+  count      = (var.alb_5xx_count_threshold < -1.5 && var.enabled) ? 1 : 0
+
+  alarm_name          = "marbot-alb-5xx-count-too-high-${random_id.id8.hex}"
+  alarm_description   = "Number of 5XX responses from ALB over the last minute unexpected. (created by marbot)"
+  evaluation_periods  = 1
+  comparison_operator = "GreaterThanUpperThreshold"
+  threshold_metric_id = "e1"
+  alarm_actions       = [local.topic_arn]
+  ok_actions          = [local.topic_arn]
+  treat_missing_data  = "notBreaching"
+  tags                = var.tags
+
+  metric_query {
+    id          = "e1"
+    expression  = "ANOMALY_DETECTION_BAND(m1)"
+    label       = "HTTPCode_ELB_5XX_Count (expected)"
+    return_data = "true"
+  }
+
+  metric_query {
+    id          = "m1"
+    return_data = "true"
+    metric {
+      metric_name = "HTTPCode_ELB_5XX_Count"
+      namespace   = "AWS/ApplicationELB"
+      period      = 60
+      stat        = "Sum"
+
+      dimensions = {
+        LoadBalancer = var.loadbalancer_fullname
+      }
+    }
+  }
+}
+
 resource "aws_cloudwatch_metric_alarm" "alb_rejected_connection_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
   count      = (var.alb_rejected_connection_count_threshold >= 0 && var.enabled) ? 1 : 0
@@ -197,6 +234,44 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high" {
   }
   treat_missing_data = "notBreaching"
   tags               = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detection" {
+  depends_on = [aws_sns_topic_subscription.marbot]
+  count      = (var.target_5xx_count_threshold < -1.5 && var.enabled) ? 1 : 0
+
+  alarm_name          = "marbot-target-5xx-count-too-high-${random_id.id8.hex}"
+  alarm_description   = "Number of 5XX responses from targets over the last minute unexpected. (created by marbot)"
+  evaluation_periods  = 1
+  comparison_operator = "GreaterThanUpperThreshold"
+  threshold_metric_id = "e1"
+  alarm_actions       = [local.topic_arn]
+  ok_actions          = [local.topic_arn]
+  treat_missing_data  = "notBreaching"
+  tags                = var.tags
+
+  metric_query {
+    id          = "e1"
+    expression  = "ANOMALY_DETECTION_BAND(m1)"
+    label       = "HTTPCode_Target_5XX_Count (expected)"
+    return_data = "true"
+  }
+
+  metric_query {
+    id          = "m1"
+    return_data = "true"
+    metric {
+      metric_name = "HTTPCode_Target_5XX_Count"
+      namespace   = "AWS/ApplicationELB"
+      period      = 60
+      stat        = "Sum"
+
+      dimensions = {
+        LoadBalancer = var.loadbalancer_fullname
+        TargetGroup  = var.targetgroup_fullname
+      }
+    }
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "target_connection_error_count_too_high" {

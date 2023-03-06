@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "4.56.0"
     }
   }
@@ -16,7 +16,7 @@ data "aws_subnet_ids" "default" {
 }
 
 resource "aws_security_group" "alb" {
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id = data.aws_vpc.default.id
 
   ingress {
     from_port        = 80
@@ -52,7 +52,7 @@ resource "aws_lb_listener" "default" {
   load_balancer_arn = aws_lb.default.arn
   port              = "80"
   protocol          = "HTTP"
-  
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.default.arn
@@ -62,7 +62,7 @@ resource "aws_lb_listener" "default" {
 module "test" {
   source = "../../"
 
-  endpoint_id = var.endpoint_id
+  endpoint_id           = var.endpoint_id
   loadbalancer_fullname = aws_lb.default.arn_suffix
-  targetgroup_fullname = aws_lb_target_group.default.arn_suffix
+  targetgroup_fullname  = aws_lb_target_group.default.arn_suffix
 }

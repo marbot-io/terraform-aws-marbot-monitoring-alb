@@ -114,7 +114,7 @@ resource "aws_cloudwatch_event_target" "monitoring_jump_start_connection" {
 {
   "Type": "monitoring-jump-start-tf-connection",
   "Module": "alb",
-  "Version": "0.3.0",
+  "Version": "1.0.0",
   "Partition": "${data.aws_partition.current.partition}",
   "AccountId": "${data.aws_caller_identity.current.account_id}",
   "Region": "${data.aws_region.current.name}"
@@ -134,15 +134,15 @@ resource "random_id" "id8" {
 
 resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_5xx_count_threshold >= 0 && var.enabled) ? 1 : 0
+  count      = (var.alb_5xx_count == "static" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-5xx-count-too-high-${random_id.id8.hex}"
-  alarm_description   = "Number of 5XX responses from ALB over the last minute too high. (created by marbot)"
+  alarm_description   = "Number of 5XX responses from ALB too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "HTTPCode_ELB_5XX_Count"
   statistic           = "Sum"
-  period              = 60
-  evaluation_periods  = 1
+  period              = var.alb_5xx_count_period
+  evaluation_periods  = var.alb_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
   threshold           = var.alb_5xx_count_threshold
   alarm_actions       = [local.topic_arn]
@@ -156,11 +156,11 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high" {
 
 resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_5xx_count_threshold < -1.5 && var.enabled) ? 1 : 0
+  count      = (var.alb_5xx_count == "anomaly_detection" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-5xx-count-too-high-${random_id.id8.hex}"
-  alarm_description   = "Number of 5XX responses from ALB over the last minute unexpected. (created by marbot)"
-  evaluation_periods  = 1
+  alarm_description   = "Number of 5XX responses from ALB unexpected. (created by marbot)"
+  evaluation_periods  = var.alb_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanUpperThreshold"
   threshold_metric_id = "e1"
   alarm_actions       = [local.topic_arn]
@@ -181,7 +181,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection
     metric {
       metric_name = "HTTPCode_ELB_5XX_Count"
       namespace   = "AWS/ApplicationELB"
-      period      = 60
+      period      = var.alb_5xx_count_period
       stat        = "Sum"
 
       dimensions = {
@@ -193,15 +193,15 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection
 
 resource "aws_cloudwatch_metric_alarm" "alb_rejected_connection_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_rejected_connection_count_threshold >= 0 && var.enabled) ? 1 : 0
+  count      = (var.alb_rejected_connection_count == "static" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-rejected-connection-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of rejected connections by ALB too high, ALB needs time to scale up. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "RejectedConnectionCount"
   statistic           = "Sum"
-  period              = 60
-  evaluation_periods  = 1
+  period              = var.alb_rejected_connection_count_period
+  evaluation_periods  = var.alb_rejected_connection_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
   threshold           = var.alb_rejected_connection_count_threshold
   alarm_actions       = [local.topic_arn]
@@ -215,15 +215,15 @@ resource "aws_cloudwatch_metric_alarm" "alb_rejected_connection_count_too_high" 
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_5xx_count_threshold >= 0 && var.enabled) ? 1 : 0
+  count      = (var.target_5xx_count == "static" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-5xx-count-too-high-${random_id.id8.hex}"
-  alarm_description   = "Number of 5XX responses from targets over the last minute too high. (created by marbot)"
+  alarm_description   = "Number of 5XX responses from targets too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "HTTPCode_Target_5XX_Count"
   statistic           = "Sum"
-  period              = 60
-  evaluation_periods  = 1
+  period              = var.target_5xx_count_period
+  evaluation_periods  = var.target_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
   threshold           = var.target_5xx_count_threshold
   alarm_actions       = [local.topic_arn]
@@ -238,11 +238,11 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high" {
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detection" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_5xx_count_threshold < -1.5 && var.enabled) ? 1 : 0
+  count      = (var.target_5xx_count == "anomaly_detection" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-5xx-count-too-high-${random_id.id8.hex}"
-  alarm_description   = "Number of 5XX responses from targets over the last minute unexpected. (created by marbot)"
-  evaluation_periods  = 1
+  alarm_description   = "Number of 5XX responses from targets unexpected. (created by marbot)"
+  evaluation_periods  = var.target_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanUpperThreshold"
   threshold_metric_id = "e1"
   alarm_actions       = [local.topic_arn]
@@ -263,7 +263,7 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detect
     metric {
       metric_name = "HTTPCode_Target_5XX_Count"
       namespace   = "AWS/ApplicationELB"
-      period      = 60
+      period      = var.target_5xx_count_period
       stat        = "Sum"
 
       dimensions = {
@@ -276,15 +276,15 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detect
 
 resource "aws_cloudwatch_metric_alarm" "target_connection_error_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_connection_error_count_threshold >= 0 && var.enabled) ? 1 : 0
+  count      = (var.target_connection_error_count == "static" && var.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-connection-error-count-too-high-${random_id.id8.hex}"
-  alarm_description   = "Number of rejected connections from ALB to targets over the last minute too high. (created by marbot)"
+  alarm_description   = "Number of rejected connections from ALB to targets too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "TargetConnectionErrorCount"
   statistic           = "Sum"
-  period              = 60
-  evaluation_periods  = 1
+  period              = var.target_connection_error_count_period
+  evaluation_periods  = var.target_connection_error_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
   threshold           = var.target_connection_error_count_threshold
   alarm_actions       = [local.topic_arn]

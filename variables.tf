@@ -72,6 +72,32 @@ variable "alb_5xx_count_evaluation_periods" {
 
 
 
+variable "alb_5xx_rate" {
+  type        = string
+  description = "5XX responses from the ALB relativ to requests (static|off)."
+  default     = "off"
+}
+
+variable "alb_5xx_rate_threshold" {
+  type        = number
+  description = "The maximum rate (in %) of 5XX responses from the ALB (0-100)."
+  default     = 5
+}
+
+variable "alb_5xx_rate_period" {
+  type        = number
+  description = "The period in seconds over which the specified statistic is applied (<= 86400 and multiple of 60)."
+  default     = 60
+}
+
+variable "alb_5xx_rate_evaluation_periods" {
+  type        = number
+  description = "The number of periods over which data is compared to the specified threshold (>= 1 and $period*$evaluation_periods <= 86400)."
+  default     = 1
+}
+
+
+
 variable "alb_rejected_connection_count" {
   type        = string
   description = "Rejected connections because the ALB had reached its maximum number of connections (static|off)."

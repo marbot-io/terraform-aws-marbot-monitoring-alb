@@ -87,7 +87,7 @@ variable "alb_5xx_rate_threshold" {
 variable "alb_5xx_rate_period" {
   type        = number
   description = "The period in seconds over which the specified statistic is applied (<= 86400 and multiple of 60)."
-  default     = 60
+  default     = 300
 }
 
 variable "alb_5xx_rate_evaluation_periods" {

@@ -114,7 +114,7 @@ resource "aws_cloudwatch_event_target" "monitoring_jump_start_connection" {
 {
   "Type": "monitoring-jump-start-tf-connection",
   "Module": "alb",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "Partition": "${data.aws_partition.current.partition}",
   "AccountId": "${data.aws_caller_identity.current.account_id}",
   "Region": "${data.aws_region.current.name}"
@@ -188,6 +188,58 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection
         LoadBalancer = var.loadbalancer_fullname
       }
     }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
+  depends_on = [aws_sns_topic_subscription.marbot]
+  count      = (var.alb_5xx_rate == "static" && var.enabled) ? 1 : 0
+
+  alarm_name          = "marbot-alb-5xx-rate-too-high-${random_id.id8.hex}"
+  alarm_description   = "5XX responses relativ to request from ALB too high. (created by marbot)"
+  evaluation_periods  = var.alb_5xx_rate_evaluation_periods
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = var.alb_5xx_rate_threshold
+  alarm_actions       = [local.topic_arn]
+  ok_actions          = [local.topic_arn]
+  treat_missing_data  = "notBreaching"
+  tags                = var.tags
+
+  metric_query {
+    id          = "alb5xx" # must start with [a-z]
+    return_data = "false"
+    metric {
+      metric_name = "HTTPCode_ELB_5XX_Count"
+      namespace   = "AWS/ApplicationELB"
+      period      = var.alb_5xx_rate_period
+      stat        = "Sum"
+
+      dimensions = {
+        LoadBalancer = var.loadbalancer_fullname
+      }
+    }
+  }
+
+  metric_query {
+    id          = "requests"
+    return_data = "false"
+    metric {
+      metric_name = "RequestCount"
+      namespace   = "AWS/ApplicationELB"
+      period      = var.alb_5xx_rate_period
+      stat        = "Sum"
+
+      dimensions = {
+        LoadBalancer = var.loadbalancer_fullname
+      }
+    }
+  }
+
+  metric_query {
+    id          = "rate"
+    expression  = "IF(requests<10, 0, alb5xx/requests)"
+    label       = "5XX rate"
+    return_data = "true"
   }
 }
 

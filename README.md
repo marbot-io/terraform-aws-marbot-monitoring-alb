@@ -24,6 +24,34 @@ terraform init
 terraform apply
 ```
 
+## Config via tags
+
+You can also configure this module by tagging the ALB (required v1.3.0 or higher). Tags take precedence over variables (tags override variables).
+
+| tag key                                                   | default value                                               | allowed values                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
+| `marbot`                                                  | on                                                          | on|off                                                |
+| `marbot:alb-5xx-count`                                    | variable `alb_5xx_count`                                    | static|anomaly_detection|off                          |
+| `marbot:alb-5xx-count:threshold`                          | variable `alb_5xx_count_threshold`                          | >= 0                                                  |
+| `marbot:alb-5xx-count:period`                             | variable `alb_5xx_count_period`                             | <= 86400 and multiple of 60                           |
+| `marbot:alb-5xx-count:evaluation-periods`                 | variable `alb_5xx_count_evaluation_periods`                 | >= 1 and $period*$evaluation-periods <= 86400         |
+| `marbot:alb-5xx-rate`                                     | variable `alb_5xx_rate`                                     | static|off                                            |
+| `marbot:alb-5xx-rate:threshold`                           | variable `alb_5xx_rate_threshold`                           | 0-100                                                 |
+| `marbot:alb-5xx-rate:period`                              | variable `alb_5xx_rate_period`                              | <= 86400 and multiple of 60                           |
+| `marbot:alb-5xx-rate:evaluation-periods`                  | variable `alb_5xx_rate_evaluation_periods`                  | >= 1 and $period*$evaluation-periods <= 86400         |
+| `marbot:alb-rejected-connection-count`                    | variable `alb_rejected_connection_count`                    | static|off                                            |
+| `marbot:alb-rejected-connection-count:threshold`          | variable `alb_rejected_connection_count_threshold`          | >= 0                                                  |
+| `marbot:alb-rejected-connection-count:period`             | variable `alb_rejected_connection_count_period`             | <= 86400 and multiple of 60                           |
+| `marbot:alb-rejected-connection-count:evaluation-periods` | variable `alb_rejected_connection_count_evaluation_periods` | >= 1 and $period*$evaluation-periods <= 86400         |
+| `marbot:target-5xx-count`                                 | variable `target_5xx_count`                                 | static|anomaly_detection|off                          |
+| `marbot:target-5xx-count:threshold`                       | variable `target_5xx_count_threshold`                       | >= 0                                                  |
+| `marbot:target-5xx-count:period`                          | variable `target_5xx_count_period`                          | <= 86400 and multiple of 60                           |
+| `marbot:target-5xx-count:evaluation-periods`              | variable `target_5xx_count_evaluation_periods`              | >= 1 and $period*$evaluation-periods <= 86400         |
+| `marbot:target-connection-error-count`                    | variable `target_connection_error_count`                    | static|off                                            |
+| `marbot:target-connection-error-count:threshold`          | variable `target_connection_error_count_threshold`          | >= 0                                                  |
+| `marbot:target-connection-error-count:period`             | variable `target_connection_error_count_period`             | <= 86400 and multiple of 60                           |
+| `marbot:target-connection-error-count:evaluation-periods` | variable `target_connection_error_count_evaluation_periods` | >= 1 and $period*$evaluation-periods <= 86400         |
+
 ## Update procedure
 
 1. Update the `version`

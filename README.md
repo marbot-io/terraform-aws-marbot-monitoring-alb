@@ -52,6 +52,19 @@ You can also configure this module by tagging the ALB (required v1.3.0 or higher
 | `marbot:target-connection-error-count:period`             | variable `target_connection_error_count_period`             | <= 86400 and multiple of 60                           |
 | `marbot:target-connection-error-count:evaluation-periods` | variable `target_connection_error_count_evaluation_periods` | >= 1 and $period*$evaluation-periods <= 86400         |
 
+You can also configure this module by tagging the target group (required v1.3.0 or higher). Tags take precedence over ALB tags and variables (tags override variables).
+
+| tag key                                                   | default value                                               | allowed values                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
+| `marbot:target-5xx-count`                                 | variable `target_5xx_count`                                 | static|anomaly_detection|off                          |
+| `marbot:target-5xx-count:threshold`                       | variable `target_5xx_count_threshold`                       | >= 0                                                  |
+| `marbot:target-5xx-count:period`                          | variable `target_5xx_count_period`                          | <= 86400 and multiple of 60                           |
+| `marbot:target-5xx-count:evaluation-periods`              | variable `target_5xx_count_evaluation_periods`              | >= 1 and $period*$evaluation-periods <= 86400         |
+| `marbot:target-connection-error-count`                    | variable `target_connection_error_count`                    | static|off                                            |
+| `marbot:target-connection-error-count:threshold`          | variable `target_connection_error_count_threshold`          | >= 0                                                  |
+| `marbot:target-connection-error-count:period`             | variable `target_connection_error_count_period`             | <= 86400 and multiple of 60                           |
+| `marbot:target-connection-error-count:evaluation-periods` | variable `target_connection_error_count_evaluation_periods` | >= 1 and $period*$evaluation-periods <= 86400         |
+
 ## Update procedure
 
 1. Update the `version`

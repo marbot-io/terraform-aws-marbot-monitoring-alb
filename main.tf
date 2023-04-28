@@ -16,8 +16,13 @@ data "aws_lb" "alb" {
   name = local.loadbalancer_name
 }
 
+data "aws_lb_target_group" "targetgroup" {
+  name = local.targetgroup_name
+}
+
 locals {
   loadbalancer_name = split("/", var.loadbalancer_fullname)[1]
+  targetgroup_name = split("/", var.targetgroup_fullname)[1]
   topic_arn         = var.create_topic == false ? var.topic_arn : join("", aws_sns_topic.marbot.*.arn)
   enabled           = var.enabled && lookup(data.aws_lb.alb.tags, "marbot", "on") != "off"
 
@@ -42,18 +47,18 @@ locals {
   alb_rejected_connection_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-rejected-connection-count:evaluation-periods", var.alb_rejected_connection_count_evaluation_periods)), var.alb_rejected_connection_count_evaluation_periods)
   alb_rejected_connection_count_evaluation_periods     = min(max(local.alb_rejected_connection_count_evaluation_periods_raw, 1), floor(86400 / local.alb_rejected_connection_count_period))
 
-  target_5xx_count                        = lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count", var.target_5xx_count)
-  target_5xx_count_threshold              = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:threshold", var.target_5xx_count_threshold)), var.target_5xx_count_threshold)
-  target_5xx_count_period_raw             = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:period", var.target_5xx_count_period)), var.target_5xx_count_period)
+  target_5xx_count                        = lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count", var.target_5xx_count))
+  target_5xx_count_threshold              = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:threshold", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:threshold", var.target_5xx_count_threshold))), var.target_5xx_count_threshold)
+  target_5xx_count_period_raw             = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:period", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:period", var.target_5xx_count_period))), var.target_5xx_count_period)
   target_5xx_count_period                 = min(max(floor(local.target_5xx_count_period_raw / 60) * 60, 60), 86400)
-  target_5xx_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:evaluation-periods", var.target_5xx_count_evaluation_periods)), var.target_5xx_count_evaluation_periods)
+  target_5xx_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:evaluation-periods", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:evaluation-periods", var.target_5xx_count_evaluation_periods))), var.target_5xx_count_evaluation_periods)
   target_5xx_count_evaluation_periods     = min(max(local.target_5xx_count_evaluation_periods_raw, 1), floor(86400 / local.target_5xx_count_period))
 
-  target_connection_error_count                        = lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count", var.target_connection_error_count)
-  target_connection_error_count_threshold              = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:threshold", var.target_connection_error_count_threshold)), var.target_connection_error_count_threshold)
-  target_connection_error_count_period_raw             = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:period", var.target_connection_error_count_period)), var.target_connection_error_count_period)
+  target_connection_error_count                        = lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count", var.target_connection_error_count))
+  target_connection_error_count_threshold              = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:threshold", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:threshold", var.target_connection_error_count_threshold))), var.target_connection_error_count_threshold)
+  target_connection_error_count_period_raw             = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:period", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:period", var.target_connection_error_count_period))), var.target_connection_error_count_period)
   target_connection_error_count_period                 = min(max(floor(local.target_connection_error_count_period_raw / 60) * 60, 60), 86400)
-  target_connection_error_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:evaluation-periods", var.target_connection_error_count_evaluation_periods)), var.target_connection_error_count_evaluation_periods)
+  target_connection_error_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:evaluation-periods", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:evaluation-periods", var.target_connection_error_count_evaluation_periods))), var.target_connection_error_count_evaluation_periods)
   target_connection_error_count_evaluation_periods     = min(max(local.target_connection_error_count_evaluation_periods_raw, 1), floor(86400 / local.target_connection_error_count_period))
 }
 

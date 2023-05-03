@@ -12,8 +12,54 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
+data "aws_lb" "alb" {
+  name = local.loadbalancer_name
+}
+
+data "aws_lb_target_group" "targetgroup" {
+  name = local.targetgroup_name
+}
+
 locals {
-  topic_arn = var.create_topic == false ? var.topic_arn : join("", aws_sns_topic.marbot.*.arn)
+  loadbalancer_name = split("/", var.loadbalancer_fullname)[1]
+  targetgroup_name = split("/", var.targetgroup_fullname)[1]
+  topic_arn         = var.create_topic == false ? var.topic_arn : join("", aws_sns_topic.marbot.*.arn)
+  enabled           = var.enabled && lookup(data.aws_lb.alb.tags, "marbot", "on") != "off"
+
+  alb_5xx_count                        = lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-count", var.alb_5xx_count)
+  alb_5xx_count_threshold              = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-count:threshold", var.alb_5xx_count_threshold)), var.alb_5xx_count_threshold)
+  alb_5xx_count_period_raw             = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-count:period", var.alb_5xx_count_period)), var.alb_5xx_count_period)
+  alb_5xx_count_period                 = min(max(floor(local.alb_5xx_count_period_raw / 60) * 60, 60), 86400)
+  alb_5xx_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-count:evaluation-periods", var.alb_5xx_count_evaluation_periods)), var.alb_5xx_count_evaluation_periods)
+  alb_5xx_count_evaluation_periods     = min(max(local.alb_5xx_count_evaluation_periods_raw, 1), floor(86400 / local.alb_5xx_count_period))
+
+  alb_5xx_rate                        = lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-rate", var.alb_5xx_rate)
+  alb_5xx_rate_threshold              = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-rate:threshold", var.alb_5xx_rate_threshold)), var.alb_5xx_rate_threshold)
+  alb_5xx_rate_period_raw             = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-rate:period", var.alb_5xx_rate_period)), var.alb_5xx_rate_period)
+  alb_5xx_rate_period                 = min(max(floor(local.alb_5xx_rate_period_raw / 60) * 60, 60), 86400)
+  alb_5xx_rate_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-5xx-rate:evaluation-periods", var.alb_5xx_rate_evaluation_periods)), var.alb_5xx_rate_evaluation_periods)
+  alb_5xx_rate_evaluation_periods     = min(max(local.alb_5xx_rate_evaluation_periods_raw, 1), floor(86400 / local.alb_5xx_rate_period))
+
+  alb_rejected_connection_count                        = lookup(data.aws_lb.alb.tags, "marbot:alb-rejected-connection-count", var.alb_rejected_connection_count)
+  alb_rejected_connection_count_threshold              = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-rejected-connection-count:threshold", var.alb_rejected_connection_count_threshold)), var.alb_rejected_connection_count_threshold)
+  alb_rejected_connection_count_period_raw             = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-rejected-connection-count:period", var.alb_rejected_connection_count_period)), var.alb_rejected_connection_count_period)
+  alb_rejected_connection_count_period                 = min(max(floor(local.alb_rejected_connection_count_period_raw / 60) * 60, 60), 86400)
+  alb_rejected_connection_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb.alb.tags, "marbot:alb-rejected-connection-count:evaluation-periods", var.alb_rejected_connection_count_evaluation_periods)), var.alb_rejected_connection_count_evaluation_periods)
+  alb_rejected_connection_count_evaluation_periods     = min(max(local.alb_rejected_connection_count_evaluation_periods_raw, 1), floor(86400 / local.alb_rejected_connection_count_period))
+
+  target_5xx_count                        = lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count", var.target_5xx_count))
+  target_5xx_count_threshold              = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:threshold", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:threshold", var.target_5xx_count_threshold))), var.target_5xx_count_threshold)
+  target_5xx_count_period_raw             = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:period", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:period", var.target_5xx_count_period))), var.target_5xx_count_period)
+  target_5xx_count_period                 = min(max(floor(local.target_5xx_count_period_raw / 60) * 60, 60), 86400)
+  target_5xx_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-5xx-count:evaluation-periods", lookup(data.aws_lb.alb.tags, "marbot:target-5xx-count:evaluation-periods", var.target_5xx_count_evaluation_periods))), var.target_5xx_count_evaluation_periods)
+  target_5xx_count_evaluation_periods     = min(max(local.target_5xx_count_evaluation_periods_raw, 1), floor(86400 / local.target_5xx_count_period))
+
+  target_connection_error_count                        = lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count", var.target_connection_error_count))
+  target_connection_error_count_threshold              = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:threshold", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:threshold", var.target_connection_error_count_threshold))), var.target_connection_error_count_threshold)
+  target_connection_error_count_period_raw             = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:period", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:period", var.target_connection_error_count_period))), var.target_connection_error_count_period)
+  target_connection_error_count_period                 = min(max(floor(local.target_connection_error_count_period_raw / 60) * 60, 60), 86400)
+  target_connection_error_count_evaluation_periods_raw = try(tonumber(lookup(data.aws_lb_target_group.targetgroup.tags, "marbot:target-connection-error-count:evaluation-periods", lookup(data.aws_lb.alb.tags, "marbot:target-connection-error-count:evaluation-periods", var.target_connection_error_count_evaluation_periods))), var.target_connection_error_count_evaluation_periods)
+  target_connection_error_count_evaluation_periods     = min(max(local.target_connection_error_count_evaluation_periods_raw, 1), floor(86400 / local.target_connection_error_count_period))
 }
 
 ##########################################################################
@@ -23,14 +69,14 @@ locals {
 ##########################################################################
 
 resource "aws_sns_topic" "marbot" {
-  count = (var.create_topic && var.enabled) ? 1 : 0
+  count = (var.create_topic && local.enabled) ? 1 : 0
 
   name_prefix = "marbot"
   tags        = var.tags
 }
 
 resource "aws_sns_topic_policy" "marbot" {
-  count = (var.create_topic && var.enabled) ? 1 : 0
+  count = (var.create_topic && local.enabled) ? 1 : 0
 
   arn    = join("", aws_sns_topic.marbot.*.arn)
   policy = data.aws_iam_policy_document.topic_policy.json
@@ -72,7 +118,7 @@ data "aws_iam_policy_document" "topic_policy" {
 
 resource "aws_sns_topic_subscription" "marbot" {
   depends_on = [aws_sns_topic_policy.marbot]
-  count      = (var.create_topic && var.enabled) ? 1 : 0
+  count      = (var.create_topic && local.enabled) ? 1 : 0
 
   topic_arn              = join("", aws_sns_topic.marbot.*.arn)
   protocol               = "https"
@@ -96,7 +142,7 @@ JSON
 
 resource "aws_cloudwatch_event_rule" "monitoring_jump_start_connection" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.module_version_monitoring_enabled && var.enabled) ? 1 : 0
+  count      = (var.module_version_monitoring_enabled && local.enabled) ? 1 : 0
 
   name                = "marbot-alb-connection-${random_id.id8.hex}"
   description         = "Monitoring Jump Start connection. (created by marbot)"
@@ -105,7 +151,7 @@ resource "aws_cloudwatch_event_rule" "monitoring_jump_start_connection" {
 }
 
 resource "aws_cloudwatch_event_target" "monitoring_jump_start_connection" {
-  count = (var.module_version_monitoring_enabled && var.enabled) ? 1 : 0
+  count = (var.module_version_monitoring_enabled && local.enabled) ? 1 : 0
 
   rule      = join("", aws_cloudwatch_event_rule.monitoring_jump_start_connection.*.name)
   target_id = "marbot"
@@ -114,7 +160,7 @@ resource "aws_cloudwatch_event_target" "monitoring_jump_start_connection" {
 {
   "Type": "monitoring-jump-start-tf-connection",
   "Module": "alb",
-  "Version": "1.2.0",
+  "Version": "1.3.0",
   "Partition": "${data.aws_partition.current.partition}",
   "AccountId": "${data.aws_caller_identity.current.account_id}",
   "Region": "${data.aws_region.current.name}"
@@ -134,17 +180,17 @@ resource "random_id" "id8" {
 
 resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_5xx_count == "static" && var.enabled) ? 1 : 0
+  count      = (local.alb_5xx_count == "static" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-5xx-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of 5XX responses from ALB too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "HTTPCode_ELB_5XX_Count"
   statistic           = "Sum"
-  period              = var.alb_5xx_count_period
-  evaluation_periods  = var.alb_5xx_count_evaluation_periods
+  period              = local.alb_5xx_count_period
+  evaluation_periods  = local.alb_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
-  threshold           = var.alb_5xx_count_threshold
+  threshold           = local.alb_5xx_count_threshold
   alarm_actions       = [local.topic_arn]
   ok_actions          = [local.topic_arn]
   dimensions = {
@@ -156,11 +202,11 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high" {
 
 resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_5xx_count == "anomaly_detection" && var.enabled) ? 1 : 0
+  count      = (local.alb_5xx_count == "anomaly_detection" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-5xx-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of 5XX responses from ALB unexpected. (created by marbot)"
-  evaluation_periods  = var.alb_5xx_count_evaluation_periods
+  evaluation_periods  = local.alb_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanUpperThreshold"
   threshold_metric_id = "e1"
   alarm_actions       = [local.topic_arn]
@@ -181,7 +227,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection
     metric {
       metric_name = "HTTPCode_ELB_5XX_Count"
       namespace   = "AWS/ApplicationELB"
-      period      = var.alb_5xx_count_period
+      period      = local.alb_5xx_count_period
       stat        = "Sum"
 
       dimensions = {
@@ -193,13 +239,13 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_count_too_high_anomaly_detection
 
 resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_5xx_rate == "static" && var.enabled) ? 1 : 0
+  count      = (local.alb_5xx_rate == "static" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-5xx-rate-too-high-${random_id.id8.hex}"
   alarm_description   = "5XX responses relativ to request from ALB too high. (created by marbot)"
-  evaluation_periods  = var.alb_5xx_rate_evaluation_periods
+  evaluation_periods  = local.alb_5xx_rate_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
-  threshold           = var.alb_5xx_rate_threshold
+  threshold           = local.alb_5xx_rate_threshold
   alarm_actions       = [local.topic_arn]
   ok_actions          = [local.topic_arn]
   treat_missing_data  = "notBreaching"
@@ -211,7 +257,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
     metric {
       metric_name = "HTTPCode_ELB_5XX_Count"
       namespace   = "AWS/ApplicationELB"
-      period      = var.alb_5xx_rate_period
+      period      = local.alb_5xx_rate_period
       stat        = "Sum"
 
       dimensions = {
@@ -226,7 +272,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
     metric {
       metric_name = "RequestCount"
       namespace   = "AWS/ApplicationELB"
-      period      = var.alb_5xx_rate_period
+      period      = local.alb_5xx_rate_period
       stat        = "Sum"
 
       dimensions = {
@@ -245,17 +291,17 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
 
 resource "aws_cloudwatch_metric_alarm" "alb_rejected_connection_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.alb_rejected_connection_count == "static" && var.enabled) ? 1 : 0
+  count      = (local.alb_rejected_connection_count == "static" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-alb-rejected-connection-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of rejected connections by ALB too high, ALB needs time to scale up. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "RejectedConnectionCount"
   statistic           = "Sum"
-  period              = var.alb_rejected_connection_count_period
-  evaluation_periods  = var.alb_rejected_connection_count_evaluation_periods
+  period              = local.alb_rejected_connection_count_period
+  evaluation_periods  = local.alb_rejected_connection_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
-  threshold           = var.alb_rejected_connection_count_threshold
+  threshold           = local.alb_rejected_connection_count_threshold
   alarm_actions       = [local.topic_arn]
   ok_actions          = [local.topic_arn]
   dimensions = {
@@ -267,17 +313,17 @@ resource "aws_cloudwatch_metric_alarm" "alb_rejected_connection_count_too_high" 
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_5xx_count == "static" && var.enabled) ? 1 : 0
+  count      = (local.target_5xx_count == "static" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-5xx-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of 5XX responses from targets too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "HTTPCode_Target_5XX_Count"
   statistic           = "Sum"
-  period              = var.target_5xx_count_period
-  evaluation_periods  = var.target_5xx_count_evaluation_periods
+  period              = local.target_5xx_count_period
+  evaluation_periods  = local.target_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
-  threshold           = var.target_5xx_count_threshold
+  threshold           = local.target_5xx_count_threshold
   alarm_actions       = [local.topic_arn]
   ok_actions          = [local.topic_arn]
   dimensions = {
@@ -290,11 +336,11 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high" {
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detection" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_5xx_count == "anomaly_detection" && var.enabled) ? 1 : 0
+  count      = (local.target_5xx_count == "anomaly_detection" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-5xx-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of 5XX responses from targets unexpected. (created by marbot)"
-  evaluation_periods  = var.target_5xx_count_evaluation_periods
+  evaluation_periods  = local.target_5xx_count_evaluation_periods
   comparison_operator = "GreaterThanUpperThreshold"
   threshold_metric_id = "e1"
   alarm_actions       = [local.topic_arn]
@@ -315,7 +361,7 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detect
     metric {
       metric_name = "HTTPCode_Target_5XX_Count"
       namespace   = "AWS/ApplicationELB"
-      period      = var.target_5xx_count_period
+      period      = local.target_5xx_count_period
       stat        = "Sum"
 
       dimensions = {
@@ -328,17 +374,17 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_count_too_high_anomaly_detect
 
 resource "aws_cloudwatch_metric_alarm" "target_connection_error_count_too_high" {
   depends_on = [aws_sns_topic_subscription.marbot]
-  count      = (var.target_connection_error_count == "static" && var.enabled) ? 1 : 0
+  count      = (local.target_connection_error_count == "static" && local.enabled) ? 1 : 0
 
   alarm_name          = "marbot-target-connection-error-count-too-high-${random_id.id8.hex}"
   alarm_description   = "Number of rejected connections from ALB to targets too high. (created by marbot)"
   namespace           = "AWS/ApplicationELB"
   metric_name         = "TargetConnectionErrorCount"
   statistic           = "Sum"
-  period              = var.target_connection_error_count_period
-  evaluation_periods  = var.target_connection_error_count_evaluation_periods
+  period              = local.target_connection_error_count_period
+  evaluation_periods  = local.target_connection_error_count_evaluation_periods
   comparison_operator = "GreaterThanThreshold"
-  threshold           = var.target_connection_error_count_threshold
+  threshold           = local.target_connection_error_count_threshold
   alarm_actions       = [local.topic_arn]
   ok_actions          = [local.topic_arn]
   dimensions = {

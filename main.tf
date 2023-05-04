@@ -114,7 +114,7 @@ resource "aws_cloudwatch_event_target" "monitoring_jump_start_connection" {
 {
   "Type": "monitoring-jump-start-tf-connection",
   "Module": "alb",
-  "Version": "1.2.0",
+  "Version": "1.2.1",
   "Partition": "${data.aws_partition.current.partition}",
   "AccountId": "${data.aws_caller_identity.current.account_id}",
   "Region": "${data.aws_region.current.name}"
@@ -206,7 +206,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
   tags                = var.tags
 
   metric_query {
-    id          = "alb5xx" # must start with [a-z]
+    id          = "alb5xx"
     return_data = "false"
     metric {
       metric_name = "HTTPCode_ELB_5XX_Count"
@@ -219,6 +219,23 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
       }
     }
   }
+
+  metric_query {
+    id          = "target5xx"
+    return_data = "false"
+    metric {
+      metric_name = "HTTPCode_Target_5XX_Count"
+      namespace   = "AWS/ApplicationELB"
+      period      = var.alb_5xx_rate_period
+      stat        = "Sum"
+
+      dimensions = {
+        LoadBalancer = var.loadbalancer_fullname
+      }
+    }
+  }
+
+
 
   metric_query {
     id          = "requests"
@@ -237,7 +254,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_rate_too_high" {
 
   metric_query {
     id          = "rate"
-    expression  = "IF(requests<10, 0, alb5xx/requests)"
+    expression  = "IF(requests<10, 0, (alb5xx+target5xx)/requests)"
     label       = "5XX rate"
     return_data = "true"
   }

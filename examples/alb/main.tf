@@ -58,13 +58,3 @@ resource "aws_lb_listener" "default" {
     target_group_arn = aws_lb_target_group.default.arn
   }
 }
-
-module "test" {
-  source = "../../"
-
-  endpoint_id           = var.endpoint_id
-  loadbalancer_fullname = aws_lb.default.arn_suffix
-  targetgroup_fullname  = aws_lb_target_group.default.arn_suffix
-  alb_5xx_count         = "anomaly_detection"
-  target_5xx_count      = "anomaly_detection"
-}
